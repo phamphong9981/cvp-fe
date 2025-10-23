@@ -1,9 +1,5 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-export const runtime = 'edge'
-
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
@@ -142,7 +138,7 @@ export default function SchedulePage() {
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
             <header className="bg-white shadow-sm border-b border-gray-200">
-                <div className="max-w-[70%] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4" style={{ maxWidth: '70%' }}>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                             <button
@@ -181,7 +177,7 @@ export default function SchedulePage() {
             </header>
 
             {/* Main Content */}
-            <main className="max-w-[70%] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6" style={{ maxWidth: '70%' }}>
                 {/* Header giống CSV */}
                 <ScheduleHeader
                     weekInfo={currentWeek ? {

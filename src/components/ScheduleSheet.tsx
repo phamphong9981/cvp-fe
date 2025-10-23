@@ -80,13 +80,18 @@ export function ScheduleSheet({
         : base
 
     // Chuẩn hoá dữ liệu cho bảng (thêm dayIndex, period, session)
-    const normalizedData = filtered.map(s => {
+    type NormalizedScheduleItem = ScheduleItem & {
+        dayIndex: number
+        period: number
+        session: 'Sáng' | 'Chiều'
+    }
+
+    const normalizedData: NormalizedScheduleItem[] = filtered.map(s => {
         const { dayIndex, period } = splitSlot(s.scheduleTime)
         return {
             ...s,
-            // props bổ sung để table dựng đúng ô
-            dayIndex,            // 0..5
-            period,              // 1..7
+            dayIndex,
+            period,
             session: periodToSession(period) as 'Sáng' | 'Chiều',
         }
     })
@@ -169,7 +174,7 @@ export function ScheduleSheet({
 
             {/* Schedule Table */}
             <ScheduleTable
-                scheduleData={normalizedData as any}
+                scheduleData={normalizedData}
                 classes={classes}
                 selectedWeek={selectedWeek}
             />
