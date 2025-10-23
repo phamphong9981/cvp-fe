@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lớp Toán Phân Hoá Theo Năng Lực - Thầy Phạm Nguyên Bằng",
-  description: "Trung tâm giáo dục chất lượng cao với các khóa học đa dạng, giảng viên giàu kinh nghiệm. Cam kết mang đến trải nghiệm học tập tốt nhất cho học viên.",
+  title: "Hệ thống quản lý - Trường THPT Chuyên Vĩnh Phúc",
+  description: "Hệ thống quản lý dành cho giáo viên và quản trị viên trường THPT Chuyên Vĩnh Phúc.",
 };
 
 export default function RootLayout({
