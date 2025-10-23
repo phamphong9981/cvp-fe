@@ -21,6 +21,5 @@ export const useGetClasses = () => {
     return useQuery<Class[]>({
         queryKey: ['classes'],
         queryFn: api.getClasses,
-        enabled: !!localStorage.getItem('token')
     })
 }

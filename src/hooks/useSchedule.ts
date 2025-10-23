@@ -40,6 +40,6 @@ export const useGetAllSchedule = (weekId?: string) => {
     return useQuery<getScheduleResponse[]>({
         queryKey: ['all-schedule', weekId],
         queryFn: () => api.getSchedules(undefined, undefined, weekId),
-        enabled: !!localStorage.getItem('token') && !!weekId,
+        enabled: !!weekId,
     })
 }
