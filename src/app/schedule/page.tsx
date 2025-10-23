@@ -37,10 +37,17 @@ export default function SchedulePage() {
     const router = useRouter()
     const { user, isAuthenticated, isLoading: authLoading } = useAuth()
     const [selectedWeek, setSelectedWeek] = useState<string>('')
-    const [weeks, setWeeks] = useState<WeekData[]>([])
+    const [weeks, setWeeks] = useState<WeekData[]>(sampleWeeks) // Initialize with sample data
     const [scheduleData, setScheduleData] = useState<ScheduleData[]>([])
-    const [classes, setClasses] = useState<Class[]>([])
+    const [classes, setClasses] = useState<Class[]>(sampleClasses) // Initialize with sample data
     const [isLoading, setIsLoading] = useState(true)
+
+    // Set default week immediately if not set
+    useEffect(() => {
+        if (!selectedWeek && sampleWeeks.length > 0) {
+            setSelectedWeek(sampleWeeks[0].id)
+        }
+    }, [selectedWeek])
 
     // Lấy thông tin tuần hiện tại
     const currentWeek = weeks.find(w => w.id === selectedWeek)
@@ -52,7 +59,7 @@ export default function SchedulePage() {
     const { data: classesData } = useGetClasses()
 
     // Lấy lịch học từ API timetable
-    const { data: timetableData, isLoading: scheduleLoading } = useGetTimetable('5a3d41aa-4122-4775-a559-a2a675e7add2')
+    const { data: timetableData, isLoading: scheduleLoading, error: timetableError } = useGetTimetable(selectedWeek)
 
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
@@ -61,26 +68,17 @@ export default function SchedulePage() {
     }, [isAuthenticated, authLoading, router])
 
     useEffect(() => {
-        if (weeksData) {
+        if (weeksData && weeksData.length > 0) {
             setWeeks(weeksData)
-            if (weeksData.length > 0 && !selectedWeek) {
+            if (!selectedWeek) {
                 setSelectedWeek(weeksData[0].id)
-            }
-        } else {
-            // Sử dụng dữ liệu mẫu nếu không có dữ liệu thực
-            setWeeks(sampleWeeks)
-            if (sampleWeeks.length > 0 && !selectedWeek) {
-                setSelectedWeek(sampleWeeks[0].id)
             }
         }
     }, [weeksData, selectedWeek])
 
     useEffect(() => {
-        if (classesData) {
+        if (classesData && classesData.length > 0) {
             setClasses(classesData)
-        } else {
-            // Sử dụng dữ liệu mẫu nếu không có dữ liệu thực
-            setClasses(sampleClasses)
         }
     }, [classesData])
 
@@ -114,7 +112,7 @@ export default function SchedulePage() {
 
             setScheduleData(convertedData)
         } else if (selectedWeek) {
-            // Sử dụng dữ liệu mẫu nếu không có dữ liệu thực
+            // Sử dụng dữ liệu mẫu khi có selectedWeek nhưng chưa có API data
             setScheduleData(sampleScheduleData)
         }
     }, [timetableData, selectedWeek])

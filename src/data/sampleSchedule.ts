@@ -99,19 +99,19 @@ export const sampleSubjects = [
 
 export const sampleWeeks = [
     {
-        id: 'week-1',
+        id: '5a3d41aa-4122-4775-a559-a2a675e7add2',
         startDate: '2025-01-06',
         endDate: '2025-01-12',
         status: 'active'
     },
     {
-        id: 'week-2',
+        id: '5a3d41aa-4122-4775-a559-a2a675e7add2',
         startDate: '2025-01-13',
         endDate: '2025-01-19',
         status: 'upcoming'
     },
     {
-        id: 'week-3',
+        id: '5a3d41aa-4122-4775-a559-a2a675e7add2',
         startDate: '2025-01-20',
         endDate: '2025-01-26',
         status: 'upcoming'
