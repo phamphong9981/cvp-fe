@@ -19,23 +19,8 @@ const api = {
 }
 
 export const useGetClasses = () => {
-    const [hasToken, setHasToken] = useState(false)
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            try {
-                setHasToken(!!window.localStorage.getItem('token'))
-            } catch {
-                setHasToken(false)
-            }
-        }
-    }, [])
-
-    const enabled = useMemo(() => hasToken, [hasToken])
-
     return useQuery<Class[]>({
         queryKey: ['classes'],
-        queryFn: api.getClasses,
-        enabled
+        queryFn: api.getClasses
     })
 }

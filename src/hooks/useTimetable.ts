@@ -23,24 +23,9 @@ const api = {
 }
 
 export const useGetTimetable = (weekId?: string) => {
-    // Đọc token một lần sau khi chắc chắn đang ở client
-    const [hasToken, setHasToken] = useState(false)
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            try {
-                setHasToken(!!window.localStorage.getItem('token'))
-            } catch {
-                setHasToken(false)
-            }
-        }
-    }, [])
-
-    const enabled = useMemo(() => Boolean(weekId) && hasToken, [weekId, hasToken])
-
     return useQuery<TimetableResponse>({
         queryKey: ['timetable', weekId],
         queryFn: () => api.getTimetable(weekId!),
-        enabled,
+        enabled: Boolean(weekId),
     })
 }

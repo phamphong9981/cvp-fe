@@ -19,23 +19,8 @@ const api = {
 }
 
 export const useGetWeeks = () => {
-    const [hasToken, setHasToken] = useState(false)
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            try {
-                setHasToken(!!window.localStorage.getItem('token'))
-            } catch {
-                setHasToken(false)
-            }
-        }
-    }, [])
-
-    const enabled = useMemo(() => hasToken, [hasToken])
-
     return useQuery<Week[]>({
         queryKey: ['weeks'],
-        queryFn: api.getWeeks,
-        enabled
+        queryFn: api.getWeeks
     })
 }
