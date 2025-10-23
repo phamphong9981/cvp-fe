@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { apiClient } from "./apiClient"
 import { Class } from "./useClass"
 import { Teacher } from "./userUser"
-import { Week } from "./useWeek"
+import { Week } from "./useWeeks"
 
 export interface Schedule {
     id: string
