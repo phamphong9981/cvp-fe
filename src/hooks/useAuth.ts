@@ -1,55 +1,91 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 interface User {
     username: string;
     token: string;
     userId: string;
-    type: string
+    type: string;
+}
+
+/** Tránh crash khi localStorage bị chặn/không tồn tại (Edge/SSR/iframe/privacy) */
+function safeGet(key: string): string | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        return window.localStorage.getItem(key);
+    } catch {
+        return null;
+    }
+}
+
+function safeSet(key: string, value: string) {
+    if (typeof window === 'undefined') return;
+    try {
+        window.localStorage.setItem(key, value);
+    } catch { }
+}
+
+function safeRemove(key: string) {
+    if (typeof window === 'undefined') return;
+    try {
+        window.localStorage.removeItem(key);
+    } catch { }
 }
 
 export function useAuth() {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Đọc trạng thái đăng nhập chỉ sau khi đã chắc chắn đang ở client
     useEffect(() => {
-        // Check if user is logged in on mount
-        const token = localStorage.getItem('token');
-        const username = localStorage.getItem('username');
-        const userId = localStorage.getItem('userId');
-        const type = localStorage.getItem('type');
-
-        if (token && username && userId && type) {
-            setUser({
-                username,
-                token,
-                userId,
-                type
-            });
+        // guard 1: chỉ chạy trên client
+        if (typeof window === 'undefined') {
+            setIsLoading(false);
+            return;
         }
-        setIsLoading(false);
+
+        // guard 2: bọc try/catch để tránh DOMException (quota, private mode, v.v.)
+        try {
+            const token = safeGet('token');
+            const username = safeGet('username');
+            const userId = safeGet('userId');
+            const type = safeGet('type');
+
+            if (token && username && userId && type) {
+                setUser({ token, username, userId, type });
+            }
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
-    const login = (userData: User) => {
+    const login = useCallback((userData: User) => {
         setUser(userData);
-    };
+        // (tuỳ chọn) đồng bộ lại storage một cách an toàn
+        safeSet('token', userData.token);
+        safeSet('username', userData.username);
+        safeSet('userId', userData.userId);
+        safeSet('type', userData.type);
+    }, []);
 
-    const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
-        localStorage.removeItem('userId');
-        localStorage.removeItem('type');
+    const logout = useCallback(() => {
+        safeRemove('token');
+        safeRemove('username');
+        safeRemove('userId');
+        safeRemove('type');
         setUser(null);
-        window.location.reload()
-    }
+        if (typeof window !== 'undefined') {
+            // dùng replace để không quay lại trang bảo vệ
+            window.location.replace('/login');
+        }
+    }, []);
 
     return {
         user,
         isLoading,
+        isAuthenticated: !!user,
         login,
-        // loginWithCredentials,
         logout,
-        isAuthenticated: !!user
     };
 }
