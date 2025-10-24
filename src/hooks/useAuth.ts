@@ -20,10 +20,17 @@ function safeGet(key: string): string | null {
 }
 
 function safeSet(key: string, value: string) {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {
+        return;
+    }
     try {
         window.localStorage.setItem(key, value);
-    } catch { }
+        // Verify it was set
+        const verify = window.localStorage.getItem(key);
+        console.log(`✅ useAuth verified ${key}:`, verify);
+    } catch (error) {
+        console.error(`❌ useAuth failed to set ${key}:`, error);
+    }
 }
 
 function safeRemove(key: string) {

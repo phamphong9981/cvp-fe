@@ -35,17 +35,22 @@ export default function LoginPage() {
                 username,
                 password,
             })
-
+            // Check if data is wrapped in a data property
+            const loginData = data?.data || data
             // Update auth context
-            login({
-                username: data.username,
-                token: data.token,
-                userId: data.userId,
-                type: data.type
-            })
+            if (loginData?.token && loginData?.username && loginData?.userId && loginData?.type) {
+                login({
+                    username: loginData.username,
+                    token: loginData.token,
+                    userId: loginData.userId,
+                    type: loginData.type
+                })
 
-            // Redirect to dashboard
-            router.push('/dashboard')
+                // Redirect to dashboard
+                router.push('/dashboard')
+            } else {
+                setError('Dữ liệu đăng nhập không hợp lệ')
+            }
         } catch (err: any) {
             setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.')
         }
