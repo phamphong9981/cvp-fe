@@ -6,7 +6,8 @@ import { apiClient } from './apiClient'
 // ============= Types =============
 export enum DINNER_TICKET_STATUS {
     ACTIVE = 'active',
-    CANCELLED = 'cancelled'
+    CANCELLED = 'cancelled',
+    USED = 'used'
 }
 
 export enum DINNER_TICKETS_TYPE {
@@ -33,6 +34,7 @@ export interface DinnerTicket {
     updatedAt: string
     profile?: Profile
     type: DINNER_TICKETS_TYPE
+    price?: number
 }
 
 export interface CreateDinnerTicketDto {
@@ -40,6 +42,7 @@ export interface CreateDinnerTicketDto {
     status?: DINNER_TICKET_STATUS
     profileId?: string
     type: DINNER_TICKETS_TYPE
+    price?: number
 }
 
 export interface UpdateDinnerTicketDto {
@@ -56,6 +59,20 @@ export interface FilterOptions {
     profileId?: string
     status?: DINNER_TICKET_STATUS
     type?: DINNER_TICKETS_TYPE
+    price?: number
+}
+
+export interface StudentStatistics {
+    profileId: string
+    studentId: string
+    fullname: string
+    phone: string
+    className: string
+    lunchCount: number
+    dinnerCount: number
+    totalCount: number
+    cancelledCount: number
+    totalAmount: number
 }
 
 // ============= User API =============

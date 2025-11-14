@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -11,6 +11,8 @@ import {
     DINNER_TICKET_STATUS,
     DINNER_TICKETS_TYPE,
     type FilterOptions,
+    type StudentStatistics,
+    type DinnerTicket,
 } from '@/hooks/useDinnerTickets'
 import { useGetClasses } from '@/hooks/useClasses'
 import { Button } from '@/components/ui/Button'
@@ -21,6 +23,7 @@ export default function DinnerTicketsPage() {
     const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
 
     // State
+    const [activeTab, setActiveTab] = useState<'tickets' | 'statistics'>('tickets')
     const [filters, setFilters] = useState<FilterOptions>({})
     const [showCreateModal, setShowCreateModal] = useState(false)
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
@@ -41,6 +44,56 @@ export default function DinnerTicketsPage() {
             router.push('/login')
         }
     }, [authLoading, isAuthenticated, router])
+
+    // Calculate statistics from tickets
+    const statistics = useMemo(() => {
+        const statsMap = new Map<string, StudentStatistics>()
+
+        tickets.forEach(ticket => {
+            if (!ticket.profile) return
+
+            const profileId = ticket.profileId
+            const existingStat = statsMap.get(profileId)
+
+            if (!existingStat) {
+                statsMap.set(profileId, {
+                    profileId: profileId,
+                    studentId: ticket.profile.id || profileId, // Use profile.id as studentId
+                    fullname: ticket.profile.fullname || '',
+                    phone: ticket.profile.phone || '',
+                    className: ticket.profile.classEntity?.name || '',
+                    lunchCount: ticket.status === DINNER_TICKET_STATUS.ACTIVE && ticket.type === DINNER_TICKETS_TYPE.LUNCH ? 1 : 0,
+                    dinnerCount: ticket.status === DINNER_TICKET_STATUS.ACTIVE && ticket.type === DINNER_TICKETS_TYPE.DINNER ? 1 : 0,
+                    totalCount: ticket.status === DINNER_TICKET_STATUS.ACTIVE ? 1 : 0,
+                    cancelledCount: ticket.status === DINNER_TICKET_STATUS.CANCELLED ? 1 : 0,
+                    totalAmount: ticket.status === DINNER_TICKET_STATUS.ACTIVE && ticket.price ? ticket.price : 0,
+                })
+            } else {
+                // Update existing stat
+                if (ticket.status === DINNER_TICKET_STATUS.ACTIVE) {
+                    if (ticket.type === DINNER_TICKETS_TYPE.LUNCH) {
+                        existingStat.lunchCount += 1
+                    } else if (ticket.type === DINNER_TICKETS_TYPE.DINNER) {
+                        existingStat.dinnerCount += 1
+                    }
+                    existingStat.totalCount += 1
+                    if (ticket.price) {
+                        existingStat.totalAmount += ticket.price
+                    }
+                } else if (ticket.status === DINNER_TICKET_STATUS.CANCELLED) {
+                    existingStat.cancelledCount += 1
+                }
+            }
+        })
+
+        // Convert map to array and sort by class name first, then by fullname
+        return Array.from(statsMap.values()).sort((a, b) => {
+            if (a.className !== b.className) {
+                return a.className.localeCompare(b.className)
+            }
+            return a.fullname.localeCompare(b.fullname)
+        })
+    }, [tickets])
 
     // Statistics
     const stats = {
@@ -256,107 +309,283 @@ export default function DinnerTicketsPage() {
                     </div>
                 </Card>
 
-                {/* Actions */}
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                        Danh sách vé ăn ({tickets.length})
-                    </h2>
-                    <Button onClick={() => setShowCreateModal(true)}>
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Tạo vé ăn mới
-                    </Button>
-                </div>
-
-                {/* Tickets Table */}
-                <Card className="overflow-hidden">
-                    {ticketsLoading ? (
-                        <div className="p-12 text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                            <p className="text-gray-600 mt-4">Đang tải...</p>
-                        </div>
-                    ) : tickets.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {/* Tab Switcher */}
+                <div className="flex space-x-2 mb-6">
+                    <button
+                        onClick={() => setActiveTab('tickets')}
+                        className={`px-6 py-3 rounded-lg font-medium transition-all ${activeTab === 'tickets'
+                            ? 'bg-blue-600 text-white shadow-lg'
+                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        <div className="flex items-center space-x-2">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                             </svg>
-                            <p className="text-gray-600">Không có vé ăn nào</p>
+                            <span>Danh sách vé ăn</span>
                         </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Ngày
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Học sinh
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Lớp
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Loại bữa ăn
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Trạng thái
-                                        </th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Thao tác
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {tickets.map(ticket => (
-                                        <tr key={ticket.id} className="hover:bg-gray-50">
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {new Date(ticket.date).toLocaleDateString('vi-VN')}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {ticket.profile?.fullname || 'N/A'}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {ticket.profile?.classEntity?.name || 'N/A'}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                <TypeBadge type={ticket.type} />
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <StatusBadge status={ticket.status} />
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                                {ticket.status === DINNER_TICKET_STATUS.ACTIVE && (
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('statistics')}
+                        className={`px-6 py-3 rounded-lg font-medium transition-all ${activeTab === 'statistics'
+                            ? 'bg-blue-600 text-white shadow-lg'
+                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        <div className="flex items-center space-x-2">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                            <span>Thống kê chi tiết</span>
+                        </div>
+                    </button>
+                </div>
+
+                {/* Actions */}
+                {activeTab === 'tickets' && (
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-semibold text-gray-900">
+                            Danh sách vé ăn ({tickets.length})
+                        </h2>
+                        <Button onClick={() => setShowCreateModal(true)}>
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Tạo vé ăn mới
+                        </Button>
+                    </div>
+                )}
+
+                {activeTab === 'statistics' && (
+                    <div className="mb-6">
+                        <h2 className="text-xl font-semibold text-gray-900">
+                            Thống kê chi tiết ({statistics.length} học sinh)
+                        </h2>
+                    </div>
+                )}
+
+                {/* Tickets Table */}
+                {activeTab === 'tickets' && (
+                    <Card className="overflow-hidden">
+                        {ticketsLoading ? (
+                            <div className="p-12 text-center">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                                <p className="text-gray-600 mt-4">Đang tải...</p>
+                            </div>
+                        ) : tickets.length === 0 ? (
+                            <div className="p-12 text-center">
+                                <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                </svg>
+                                <p className="text-gray-600">Không có vé ăn nào</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Ngày
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Học sinh
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Lớp
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Loại bữa ăn
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Trạng thái
+                                            </th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Thao tác
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {tickets.map(ticket => (
+                                            <tr key={ticket.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {new Date(ticket.date).toLocaleDateString('vi-VN')}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {ticket.profile?.fullname || 'N/A'}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {ticket.profile?.classEntity?.name || 'N/A'}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    <TypeBadge type={ticket.type} />
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <StatusBadge status={ticket.status} />
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                                    {ticket.status === DINNER_TICKET_STATUS.ACTIVE && (
+                                                        <button
+                                                            onClick={() => handleUpdateTicket(ticket.id, DINNER_TICKET_STATUS.CANCELLED)}
+                                                            className="text-orange-600 hover:text-orange-900"
+                                                        >
+                                                            Hủy
+                                                        </button>
+                                                    )}
+                                                    {ticket.status === DINNER_TICKET_STATUS.CANCELLED && (
+                                                        <button
+                                                            onClick={() => handleUpdateTicket(ticket.id, DINNER_TICKET_STATUS.ACTIVE)}
+                                                            className="text-green-600 hover:text-green-900"
+                                                        >
+                                                            Kích hoạt
+                                                        </button>
+                                                    )}
                                                     <button
-                                                        onClick={() => handleUpdateTicket(ticket.id, DINNER_TICKET_STATUS.CANCELLED)}
-                                                        className="text-orange-600 hover:text-orange-900"
+                                                        onClick={() => handleDeleteTicket(ticket.id)}
+                                                        className="text-red-600 hover:text-red-900 ml-4"
                                                     >
-                                                        Hủy
+                                                        Xóa
                                                     </button>
-                                                )}
-                                                {ticket.status === DINNER_TICKET_STATUS.CANCELLED && (
-                                                    <button
-                                                        onClick={() => handleUpdateTicket(ticket.id, DINNER_TICKET_STATUS.ACTIVE)}
-                                                        className="text-green-600 hover:text-green-900"
-                                                    >
-                                                        Kích hoạt
-                                                    </button>
-                                                )}
-                                                <button
-                                                    onClick={() => handleDeleteTicket(ticket.id)}
-                                                    className="text-red-600 hover:text-red-900 ml-4"
-                                                >
-                                                    Xóa
-                                                </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+                )}
+
+                {/* Statistics Table */}
+                {activeTab === 'statistics' && (
+                    <Card className="overflow-hidden">
+                        {ticketsLoading ? (
+                            <div className="p-12 text-center">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                                <p className="text-gray-600 mt-4">Đang tải...</p>
+                            </div>
+                        ) : statistics.length === 0 ? (
+                            <div className="p-12 text-center">
+                                <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                <p className="text-gray-600">Không có dữ liệu thống kê</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                STT
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Tên học sinh
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Mã học sinh
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Lớp
+                                            </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                SĐT
+                                            </th>
+                                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Suất trưa
+                                            </th>
+                                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Suất tối
+                                            </th>
+                                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Tổng suất
+                                            </th>
+                                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Đã hủy
+                                            </th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Tổng tiền
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {statistics.map((stat, index) => (
+                                            <tr key={stat.profileId} className="hover:bg-gray-50">
+                                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {index + 1}
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                    {stat.fullname}
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {stat.studentId}
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {stat.className}
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {stat.phone || 'N/A'}
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                                        {stat.lunchCount}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                                        {stat.dinnerCount}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                        {stat.totalCount}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                        {stat.cancelledCount}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
+                                                    {stat.totalAmount.toLocaleString('vi-VN')}đ
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot className="bg-gray-50">
+                                        <tr>
+                                            <td colSpan={5} className="px-4 py-4 text-sm font-bold text-gray-900 text-right">
+                                                TỔNG CỘNG:
+                                            </td>
+                                            <td className="px-4 py-4 text-sm text-center font-bold text-gray-900">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-200 text-orange-900">
+                                                    {statistics.reduce((sum, stat) => sum + stat.lunchCount, 0)}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4 text-sm text-center font-bold text-gray-900">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-200 text-indigo-900">
+                                                    {statistics.reduce((sum, stat) => sum + stat.dinnerCount, 0)}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4 text-sm text-center font-bold text-gray-900">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-200 text-blue-900">
+                                                    {statistics.reduce((sum, stat) => sum + stat.totalCount, 0)}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4 text-sm text-center font-bold text-gray-900">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-200 text-red-900">
+                                                    {statistics.reduce((sum, stat) => sum + stat.cancelledCount, 0)}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4 text-sm text-right font-bold text-blue-600">
+                                                {statistics.reduce((sum, stat) => sum + stat.totalAmount, 0).toLocaleString('vi-VN')}đ
                                             </td>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </Card>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+                )}
             </main>
 
             {/* Create Modal */}
