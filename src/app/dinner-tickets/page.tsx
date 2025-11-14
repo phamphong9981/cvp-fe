@@ -23,7 +23,6 @@ export default function DinnerTicketsPage() {
     const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
 
     // State
-    const [activeTab, setActiveTab] = useState<'tickets' | 'statistics'>('tickets')
     const [filters, setFilters] = useState<FilterOptions>({})
     const [showCreateModal, setShowCreateModal] = useState(false)
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
@@ -95,6 +94,13 @@ export default function DinnerTicketsPage() {
         })
     }, [tickets])
 
+    // Check if viewing student detail
+    const isViewingStudentDetail = Boolean(filters.profileId)
+    const selectedStudent = useMemo(() => {
+        if (!filters.profileId) return null
+        return statistics.find(stat => stat.profileId === filters.profileId)
+    }, [filters.profileId, statistics])
+
     // Statistics
     const stats = {
         total: tickets.length,
@@ -151,6 +157,18 @@ export default function DinnerTicketsPage() {
             ...prev,
             [key]: value || undefined,
         }))
+    }
+
+    const handleStudentClick = (profileId: string) => {
+        setFilters(prev => ({
+            ...prev,
+            profileId: profileId,
+        }))
+    }
+
+    const handleBackToStatistics = () => {
+        const { profileId, ...restFilters } = filters
+        setFilters(restFilters)
     }
 
     if (authLoading) {
@@ -213,6 +231,47 @@ export default function DinnerTicketsPage() {
                     <StatCard title="Bữa trưa" value={stats.lunch.toString()} color="orange" />
                     <StatCard title="Bữa tối" value={stats.dinner.toString()} color="indigo" />
                 </div>
+
+                {/* Back button when viewing student detail */}
+                {isViewingStudentDetail && (
+                    <div className="mb-6">
+                        <Button
+                            onClick={handleBackToStatistics}
+                            variant="outline"
+                            className="flex items-center space-x-2"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            <span>Quay lại thống kê</span>
+                        </Button>
+                        {selectedStudent && (
+                            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                    Chi tiết vé ăn: {selectedStudent.fullname}
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                    <div>
+                                        <span className="text-gray-600">Lớp:</span>
+                                        <span className="ml-2 font-medium">{selectedStudent.className}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">SĐT:</span>
+                                        <span className="ml-2 font-medium">{selectedStudent.phone || 'N/A'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Tổng suất:</span>
+                                        <span className="ml-2 font-medium">{selectedStudent.totalCount}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Tổng tiền:</span>
+                                        <span className="ml-2 font-medium text-blue-600">{selectedStudent.totalAmount.toLocaleString('vi-VN')}đ</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Filters */}
                 <Card className="p-6 mb-6">
@@ -309,54 +368,8 @@ export default function DinnerTicketsPage() {
                     </div>
                 </Card>
 
-                {/* Tab Switcher */}
-                <div className="flex space-x-2 mb-6">
-                    <button
-                        onClick={() => setActiveTab('tickets')}
-                        className={`px-6 py-3 rounded-lg font-medium transition-all ${activeTab === 'tickets'
-                            ? 'bg-blue-600 text-white shadow-lg'
-                            : 'bg-white text-gray-600 hover:bg-gray-50'
-                            }`}
-                    >
-                        <div className="flex items-center space-x-2">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                            </svg>
-                            <span>Danh sách vé ăn</span>
-                        </div>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('statistics')}
-                        className={`px-6 py-3 rounded-lg font-medium transition-all ${activeTab === 'statistics'
-                            ? 'bg-blue-600 text-white shadow-lg'
-                            : 'bg-white text-gray-600 hover:bg-gray-50'
-                            }`}
-                    >
-                        <div className="flex items-center space-x-2">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                            <span>Thống kê chi tiết</span>
-                        </div>
-                    </button>
-                </div>
-
-                {/* Actions */}
-                {activeTab === 'tickets' && (
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-semibold text-gray-900">
-                            Danh sách vé ăn ({tickets.length})
-                        </h2>
-                        <Button onClick={() => setShowCreateModal(true)}>
-                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                            Tạo vé ăn mới
-                        </Button>
-                    </div>
-                )}
-
-                {activeTab === 'statistics' && (
+                {/* Title */}
+                {!isViewingStudentDetail && (
                     <div className="mb-6">
                         <h2 className="text-xl font-semibold text-gray-900">
                             Thống kê chi tiết ({statistics.length} học sinh)
@@ -364,99 +377,98 @@ export default function DinnerTicketsPage() {
                     </div>
                 )}
 
-                {/* Tickets Table */}
-                {activeTab === 'tickets' && (
-                    <Card className="overflow-hidden">
-                        {ticketsLoading ? (
-                            <div className="p-12 text-center">
-                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                                <p className="text-gray-600 mt-4">Đang tải...</p>
-                            </div>
-                        ) : tickets.length === 0 ? (
-                            <div className="p-12 text-center">
-                                <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                                </svg>
-                                <p className="text-gray-600">Không có vé ăn nào</p>
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Ngày
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Học sinh
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Lớp
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Loại bữa ăn
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Trạng thái
-                                            </th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Thao tác
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {tickets.map(ticket => (
-                                            <tr key={ticket.id} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {new Date(ticket.date).toLocaleDateString('vi-VN')}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {ticket.profile?.fullname || 'N/A'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {ticket.profile?.classEntity?.name || 'N/A'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    <TypeBadge type={ticket.type} />
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <StatusBadge status={ticket.status} />
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                                    {ticket.status === DINNER_TICKET_STATUS.ACTIVE && (
-                                                        <button
-                                                            onClick={() => handleUpdateTicket(ticket.id, DINNER_TICKET_STATUS.CANCELLED)}
-                                                            className="text-orange-600 hover:text-orange-900"
-                                                        >
-                                                            Hủy
-                                                        </button>
-                                                    )}
-                                                    {ticket.status === DINNER_TICKET_STATUS.CANCELLED && (
-                                                        <button
-                                                            onClick={() => handleUpdateTicket(ticket.id, DINNER_TICKET_STATUS.ACTIVE)}
-                                                            className="text-green-600 hover:text-green-900"
-                                                        >
-                                                            Kích hoạt
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => handleDeleteTicket(ticket.id)}
-                                                        className="text-red-600 hover:text-red-900 ml-4"
-                                                    >
-                                                        Xóa
-                                                    </button>
-                                                </td>
+                {/* Student Detail Tickets Table */}
+                {isViewingStudentDetail && (
+                    <div className="mb-6">
+                        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                            Danh sách vé ăn ({tickets.length} vé)
+                        </h2>
+                        <Card className="overflow-hidden">
+                            {ticketsLoading ? (
+                                <div className="p-12 text-center">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                                    <p className="text-gray-600 mt-4">Đang tải...</p>
+                                </div>
+                            ) : tickets.length === 0 ? (
+                                <div className="p-12 text-center">
+                                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                    </svg>
+                                    <p className="text-gray-600">Không có vé ăn nào</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Ngày
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Loại bữa ăn
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Trạng thái
+                                                </th>
+                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Giá tiền
+                                                </th>
+                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Thao tác
+                                                </th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </Card>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {tickets.map(ticket => (
+                                                <tr key={ticket.id} className="hover:bg-gray-50">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        {new Date(ticket.date).toLocaleDateString('vi-VN')}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        <TypeBadge type={ticket.type} />
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <StatusBadge status={ticket.status} />
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                                                        {ticket.price ? `${ticket.price.toLocaleString('vi-VN')}đ` : 'N/A'}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                                        {ticket.status === DINNER_TICKET_STATUS.ACTIVE && (
+                                                            <button
+                                                                onClick={() => handleUpdateTicket(ticket.id, DINNER_TICKET_STATUS.CANCELLED)}
+                                                                className="text-orange-600 hover:text-orange-900"
+                                                            >
+                                                                Hủy
+                                                            </button>
+                                                        )}
+                                                        {ticket.status === DINNER_TICKET_STATUS.CANCELLED && (
+                                                            <button
+                                                                onClick={() => handleUpdateTicket(ticket.id, DINNER_TICKET_STATUS.ACTIVE)}
+                                                                className="text-green-600 hover:text-green-900"
+                                                            >
+                                                                Kích hoạt
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleDeleteTicket(ticket.id)}
+                                                            className="text-red-600 hover:text-red-900 ml-4"
+                                                        >
+                                                            Xóa
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </Card>
+                    </div>
                 )}
 
                 {/* Statistics Table */}
-                {activeTab === 'statistics' && (
+                {!isViewingStudentDetail && (
                     <Card className="overflow-hidden">
                         {ticketsLoading ? (
                             <div className="p-12 text-center">
@@ -509,11 +521,15 @@ export default function DinnerTicketsPage() {
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
                                         {statistics.map((stat, index) => (
-                                            <tr key={stat.profileId} className="hover:bg-gray-50">
+                                            <tr
+                                                key={stat.profileId}
+                                                className="hover:bg-gray-50 cursor-pointer transition-colors"
+                                                onClick={() => handleStudentClick(stat.profileId)}
+                                            >
                                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                                                     {index + 1}
                                                 </td>
-                                                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-blue-600 hover:text-blue-800">
                                                     {stat.fullname}
                                                 </td>
                                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
